@@ -1,0 +1,85 @@
+#! /usr/bin/env zsh
+
+lang=$1
+
+if [ $lang = 'python' ]; then
+	extension=".py"
+	comment="#"
+	interpreter="python3"
+	compiler=""
+	init_code="\ndef main():\n\treturn\n\nif __name__ == '__main__':\n\tmain()"
+elif [ $lang = 'bash' ]; then
+	extension=".sh"
+	comment="#"
+	interpreter="bash"
+	compiler=""
+	init_code=""
+elif [ $lang = 'zsh' ]; then
+	extension=".sh"
+	comment="#"
+	interpreter="zsh"
+	compiler=""
+	init_code=""
+elif [ $lang = 'c' ]; then
+	extension=".c"
+	comment="//"
+	interpreter=""
+	compiler=$(gcc --version | head -n 1)
+	compiling="gcc -o $2.x $filename"
+	init_code="\nint main(){\n\treturn 0\n}"
+elif [ $lang = 'cpp' ] || [ $lang = 'c++' ]; then
+	extension=".cpp"
+	comment="//"
+	interpreter=""
+	compiler=$(gcc --version | head -n 1)
+	compiling="gcc -lstdc++ -o $2.x $filename"
+	init_code="#include<iostream>\nusing namespace std;\n\nint main(){\n\treturn 0\n}"
+elif [ $lang = 'fortran' ]; then
+	extension=".f90"
+	comment="!"
+	interpreter=""
+	compiler=$(gfortran --version | head -n 1)
+	compiling="gfortran -Wall -pedantic -std=f95 -c -o $2.out $2$extension && gfortran -o $2.x $2.out"
+	init_code="\nPROGRAM $2\n\n\nEND PROGRAM"
+fi
+
+
+printf "Use default file extension ($extension)? [Y/n] " >&2
+read -r ans
+
+if [[ "$ans" =~ ^([nN][oO]|[nN])$ ]]; then
+	filename=$2
+else
+	filename="$2$extension"
+fi
+
+touch $filename
+
+# Shbang
+if [ ! -z "$interpreter" ]; then
+	chmod +x $filename
+	echo "$comment! /usr/bin/env $interpreter\n$comment " > $filename
+fi
+
+# File data
+echo "$comment Date:	$( date +'%Y/%m/%d' )" >> $filename
+echo "$comment Author:  $( whoami )" >> $filename
+
+# Compiler
+if [ ! -z "$compiler" ]; then
+	echo "$comment Compiler: $compiler" >> $filename
+	echo "$comment Compiling: $compiling" >> $filename
+fi
+
+# Additional comments
+printf "Additional comments: " >&2
+read -r additional
+if [ ! -z "$additional" ]; then
+	echo "$comment\n$comment $additional" >> $filename
+fi
+# Initial default code
+echo $init_code >> $filename
+
+$EDITOR $filename
+
+clear && lsd

@@ -1,0 +1,317 @@
+#!/usr/bin/env python3
+import audio_metadata						                							# Get metadata
+from os import system as console, remove, get_terminal_size								# To use the shell
+import miniaudio							                							# To reproduce music
+from time import sleep, time				                							# Time controll
+from shutil import copy2					                							# To copy files
+from pyperclip import copy as clipboard		                							# Copy to clipboard
+
+clear = "clear"
+exit_options = {"x", "exit", "salir", "e"}
+cancel_options = {"cancel", "c"}
+no_options = {"no", "n"}
+yes_options = {"y", "yes", "s", "", "a"}
+back_options = {"0", "b", "back"} 
+restart_options = {"r", "restart"}
+tmp = ""
+
+def lyricPrint(line, t: int):
+    if t not in [-2, -1, 0, 1, 2]: return
+    CL = "\x1b[2K"
+    BOLD = f"{CL}\033[1m"
+    FADE = f"{CL}\033[2m"
+    NORMAL = f"{CL}\033[0m"
+    END = "\033[0m"
+    UP = "\x1b[1A"
+    match t:
+        case -2:
+            # El formato pasado pasado
+            print(f"{UP*7}{FADE} {line}")
+        case -1:
+            # El formato pasado
+            print(f"{NORMAL} {line}\n")
+        case 0:
+            # El formato presente
+            print(f"{BOLD}-> {line}\n")
+        case 1:
+            # El formato futuro
+            print(f"{NORMAL} {line}")
+        case 2:
+            # El formato futuro futuro
+            print(f"{FADE} {line}{END}")
+
+    return
+def mmssToSecs(mm: str, ss: str) -> float:
+	return 60*float(mm) + float(ss)
+def secsToMmss(t: float) -> tuple:
+	s = t%60
+	m = int(t-s)//60
+	return (f"{m:02d}",f"{s:05.2f}")
+
+class Lyric:
+	def __init__(self, line: str) -> None:
+		if not {"[", ":", "]"}.issubset(set([*line])):
+			self.type = "n"
+			self._time = 0.0
+			self.mm = "00"
+			self.ss = "00.00"
+			self.words = line.strip().replace("&apos;", "'")
+			return
+		t_seps = [line.find(i) for i in "[:]"]
+		if line[1].isnumeric():
+			self.type = "t"
+			self.mm = line[t_seps[0] + 1 : t_seps[1]]
+			self.ss = line[t_seps[1] + 1 : t_seps[2]]
+			self._time = mmssToSecs(self.mm, self.ss)
+			self.words = line[t_seps[2] + 1:].strip().replace("&apos;", "'")
+			return
+		self.type = line[t_seps[0] + 1 : t_seps[1]]
+		self.words = line[t_seps[1] + 1: t_seps[2]].strip().replace("&apos;", "'")
+		self.mm = self.type
+		self.ss = self.words
+		self._time = 0.0
+		return
+	
+	@property
+	def time(self):
+		return self._time
+	@time.setter
+	def time(self, newtime: float):
+		self._time = newtime
+		self.mm, self.ss = secsToMmss(newtime)
+
+	def __rshift__(self, other):
+		if type(other) in (int, float):
+			return self.time > other
+		if type(other) == type(self):
+			return self.time > other.time
+		return self.time > float(other)
+	
+	def __lshift__(self, other):
+		if type(other) in (int, float):
+			return self.time < other
+		if type(other) == type(self):
+			return self.time < other.time
+		return self.time < float(other)
+
+	def __str__(self) -> str:
+		return self.words
+	
+	def __repr__(self) -> str:
+		return f"[{self.mm}:{self.ss}]" + (f"{self.words}" if self.type in "tn" else "")
+
+def getLyrics() -> dict:
+	metadata = audio_metadata.load(tmp)
+	try:
+		duration = metadata['streaminfo']['duration']
+	except:
+		duration = "00:00"
+	try:
+		title = metadata['tags']['title'][0]
+	except:
+		title = ""
+	try:
+		artist = metadata['tags']['artist'][0]
+	except:
+		artist = ""
+	try:
+		raw_lyrics = metadata['tags']['lyrics'][0]
+		if type(raw_lyrics) != str:
+			raw_lyrics = raw_lyrics['text']
+	except:
+		print("La canción no tiene letra :(")
+		input("Enter para continuar > ")
+		raw_lyrics = ""
+	lyrics = [Lyric(line) for line in raw_lyrics.split('\n')]
+	# Sort Lyrics by time
+	n = len(lyrics)
+	for i in range(n):
+		for j in range(0,n-i-1):
+			if lyrics[j] >> lyrics[j+1]:
+				lyrics[j], lyrics[j+1] = lyrics[j+1], lyrics[j]
+	lyrics = list(dict.fromkeys(lyrics))
+
+	return {"title":title, "artist": artist, "duration": duration, "text": lyrics}
+
+def singAlong(lyrics: dict):
+	title = lyrics["title"]
+	artist = lyrics["artist"]
+	text = lyrics["text"]
+	print(f' "{title}" by {artist}')
+	print( "=" * (len(title) + 9 + len(artist)) )
+	print("\n"*7)
+	del title, artist
+	# Reproducir la música
+	stream = miniaudio.stream_file(tmp)
+	with miniaudio.PlaybackDevice() as device:
+		device.start(stream)
+		actual_time = 0.0
+		for i, lyric in enumerate(text):
+			sleep(lyric.time - actual_time)
+			
+			if i-2 in range(len(text)):
+				lyricPrint(text[i-2] if text[i-2].type == "t" else "", t = -2)
+			else: lyricPrint("", t = -2)
+			if i-1 in range(len(text)):
+				lyricPrint(text[i-1] if text[i-1].type == "t" else "", t = -1)
+			else: lyricPrint("", t = -1)
+			
+			lyricPrint(lyric, t = 0)
+
+			lyricPrint(text[i+1] if i+1 in range(len(text)) else "", t = 1)
+			lyricPrint(text[i+2] if i+2 in range(len(text)) else "", t = 2)
+
+			actual_time = lyric.time
+		input("Enter para salir > ")
+	return
+
+def justPlay():
+	stream = miniaudio.stream_file(tmp)
+	with miniaudio.PlaybackDevice() as device:
+		device.start(stream)
+		input("Playing! Enter to stop.")
+
+def printLyrics(lyrics: dict):
+	print(f'"{lyrics["title"]}" by {lyrics["artist"]}')
+	print( "=" * (len(lyrics["title"]) + 6 + len(lyrics["artist"])) )
+	for lyric in lyrics["text"]:
+		if lyric.type == "t":
+			print(lyric)
+	input("> ")
+	return
+
+def fixOffset(lyrics: list) -> list:
+	human_delay = 0.172*2
+	new_lyrics = lyrics
+	stream = miniaudio.stream_file(tmp)
+	# Find the first real lyric
+	initial_index: int
+	for i, lyric in enumerate(lyrics):
+		if lyric.type == "t" and str(lyric) != "":
+			initial_index = i
+			break
+	# Choose where to start
+	while True:
+		for i, lyric in enumerate(lyrics):
+			if i < initial_index: continue
+			print(i, lyric)
+		print("Escoje el número de línea desde la que quieres correjir el offset\n")
+		n = input("Ingresa 'c' para cancelar\n> ")
+		console(clear)
+		if n.isnumeric():
+			if int(n) in range(initial_index, len(lyrics)):
+				n = int(n)
+				break
+		if n in cancel_options: return lyrics
+		continue
+	# Take the input so we can grab the time
+	while True:
+		print('A continuación, se reproducirá la canción.')
+		input("Presiona Enter para comenzar\n> ")
+		print("\n\nOpciones:\nc. Cancelar la corrección\nr. Repetir canción\n﬌  Tomar el tiempo hasta aquí")
+		with miniaudio.PlaybackDevice() as device:
+			device.start(stream)
+			offset = time()
+			new_time = input(f'\n{lyrics[n]} -> ')
+			offset = time() - offset - human_delay
+			if new_time in yes_options: break
+			if new_time in cancel_options: return lyrics
+			if new_time in restart_options: continue
+		console(clear)
+	# Verify time
+	mm, ss = secsToMmss(offset)
+	print(f"\r{mm}:{ss}")
+	if n - 1 in range(len(lyrics)):
+		if offset < lyrics[n-1].time:
+			offset = lyrics[n-1].time + human_delay
+			print("El tiempo está antes de la letra anterior,\nse ha corrido para evitar problemas")
+			input("> ")
+	print("Tiempo tomado.")
+	# Move lyrics
+	offset = lyrics[n].time - offset
+	for i, lyric in enumerate(new_lyrics):
+		if i >= n:
+			lyric.time = lyric.time - offset
+	print("Hecho.")
+	input("Presiona Enter para volver > ")
+	console(clear)
+	return list(dict.fromkeys(new_lyrics))
+def editTimes(lyrics: dict) -> dict:
+	new_lyrics = lyrics
+	while True:
+		print("==== Añadir o Corregir tiempos ====")
+		print("1. Corregir el offset.")
+		print("2. Corregir cada línea por separado")
+		print("3. Corregir sólo algunas líneas")
+		print("4. Añadir tiempos a letra en crudo\n")
+		print("x. Volver al menú principal")
+		option = input("> ").lower()
+		console(clear)
+		if option in exit_options | back_options:
+			break
+		match option:
+			case "1":
+				new_lyrics["text"] = fixOffset(new_lyrics["text"])
+			case "2":
+				pass
+			case "3":
+				pass
+			case "4":
+				pass
+	return new_lyrics
+
+
+def copyToClipboard(lyrics: list):
+	text = ""
+	for i in lyrics:
+		text += i.__repr__() + "\n"
+	clipboard(text)
+	input(text)
+
+def main() -> bool:
+	# 1. Obtener el path
+	global tmp
+	console(clear)
+	path = input("Song path: ")
+	tmp = "tmp." + path.rpartition(".")[2]
+	copy2(path, tmp)
+	del path
+	lyrics = getLyrics()
+	# 2. Preguntar qué quiere hacer hasta el infinito.
+	while True:
+		console(clear)
+		print("==== ¿Qué deseas hacer? ====")
+		print("1. Cantar la canción")
+		print("2. Sólo reproducir")
+		print("3. Sólo ver la letra")
+		print("4. Añadir/Corregir tiempos")
+		print("5. Sobreescribir la letra")
+		print("6. Copiar la letra\n")
+		print("0. Cambiar de canción")
+		print("x. Salir")
+		option = input("> ").lower()
+		console(clear)
+		if option in exit_options | no_options:
+			return True
+		if option in back_options:
+			return False
+		match option:
+			case "1":
+				singAlong(lyrics)
+			case "2":
+				justPlay()
+			case "3":
+				printLyrics(lyrics)
+			case "4":
+				lyrics = editTimes(lyrics)
+			case "5":
+				pass
+			case "6":
+				copyToClipboard(lyrics["text"])
+
+
+if __name__ == "__main__":
+	exited = False
+	while not exited:
+		exited = main()
+	remove(tmp)

@@ -1,0 +1,49 @@
+#! /usr/bin/env python3
+# Date:	2024/02/07
+# Author:  andyp3r3z
+# Little program to search directly from terminal, with default browser
+
+from subprocess import Popen, DEVNULL
+from sys import argv as args
+
+def get_link():
+	options = {"-g", "--google", "-i", "--image", "-gi", "-ig", "-c", "--chat", "-v", "-y", "--youtube"}
+	selected_options = set(args) & options
+	query = "+".join(args[1 + len(selected_options):])
+	if len(selected_options) == 0: # Buscar en Ecosia Search
+		return f"https://www.ecosia.org/search?q={query}"
+	if selected_options <= {"-g", "--google"}: # Google
+		return f"https://www.google.com/search?q={query}"
+	if selected_options <= {"-i", "--images"}: # Images
+		return f"https://www.ecosia.org/image?q={query}"
+	if selected_options <= {"-gi", "-ig", "-i", "-g", "--image", "--google"}: # Google images
+		return f"https://www.ecosia.org/search?q={query}&tbm=isch"
+	if selected_options <= {"-v", "-y", "--video", "--youtube"}: # Youtube
+		return f"https://www.youtube.com/results?search_query={query}"
+	if selected_options <= {"-c", "--chat"}: # ChatGPT
+		match query:
+			case "otros": hash = "c/f8abb1b9-fa7a-4383-8ed9-832a33d70ea1"
+			case "colegio": hash = "c/34ae3a55-74fd-49ea-89fb-2c6de61cc002"
+			case "universidad": hash = "c/e43a05b3-871f-4511-9cbd-1ac7aebc25ad"
+			case _:
+				print("No se seleccionó ningún chat existente (otros, colegio, universidad).")
+				print("Abriendo ChatGPT por defecto.")
+				hash = ""
+		return f"https://chat.openai.com/{hash}"
+
+if __name__ == '__main__':
+	l, r = "{", "}"
+	if ("-h" in args) or ("--help" in args):
+		print("""USAGE: search [OPTION] [QUERY]
+	-g, --google		Búsqueda en Google.
+	-i, --image		Búsqueda de Imágenes.
+	-gi, -ig		Búsqueda de Imágenes en Google.
+	-c, --chat		Abrir un chat de ChatGPT {otros | colegio | universidad}.
+	-v, -y, --youtube	Búsqueda en youtube.""")
+		exit()
+	Popen(
+		f'xdg-open {get_link()} & [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ] && hyprctl dispatch movetoworkspace $(hyprctl monitors | grep \'active workspace\' | awk \'{l}print $3{r}\')',
+		shell = True, 
+		stdout = DEVNULL, 
+		stderr = DEVNULL
+	)

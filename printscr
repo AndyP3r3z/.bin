@@ -1,0 +1,9 @@
+#! /usr/bin/env bash
+# 
+# Date:	2024/04/26
+# Author:  andyp3r3z
+#
+# Little bash script to take screenshots with grim and slurp.
+
+grim -g "$(slurp)" - | wl-copy
+notify-send "Screenshot copied to the clipboard" -t 5000 --app-name="Print Screen"

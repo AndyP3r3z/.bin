@@ -1,0 +1,8 @@
+#! /usr/bin/env sh
+# 
+# Date:	2024/04/12
+# Author:  andyp3r3z
+#
+# Changes to a random wallpaper inside a folder specified.
+
+while sleep $1; do swww img $2/$(\ls $2 | shuf -n 1) --transition-type any; done

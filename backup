@@ -1,0 +1,57 @@
+#! /usr/bin/zsh
+
+# 2023/07/28
+# andyp3r3z
+#
+# This reads the file `~/.backupfiles` and copies it to a a path.
+
+# 0. Setup variables and functions
+file="$HOME/.backupfiles"
+user=$(whoami)
+target=$1
+
+# 1. Make sure the file exists and it is not empty.
+if [ ! -f "$file" ]; then
+	echo "File \`.backupfiles\` does not exist.\nMake sure to create it with the paths you want to backup."
+	exit 1
+fi
+if [ ! -s "$file" ]; then
+	echo "\`.backupfiles\` is empty."
+	exit 1
+fi
+
+# 2. Make sure the target directory exists
+if [ ! -d "$1" ]; then
+	echo "Target dir not valid: $1.\nPlease specify a valid directory to copy the files."
+	exit 1
+fi
+
+# 3. Read all lines and copy to desired path.
+IFS=$'\n\n'
+for l in $(cat $file); do
+	# 3.0. Process comments and blank lines.
+	if [ "${l#*"#"}" != "$l" ]; then continue; fi
+	if [ "$l" = "" ]; then continue; fi
+	origin="${l//\~/$HOME}"
+	# 3.1. Process directories.
+	if [ -d "$origin" ]; then 
+		option="-r"
+	# 3.2. Process files
+	elif [ -f "$origin" ]; then 
+		option=""
+	# 3.3. Not a real path
+	else
+		echo "Path not found: $l"
+		read
+		continue
+	fi
+	# 3.4. Create the needed folders
+	destination="${origin//$HOME/$target}"
+	destinationfolder=$(dirname $destination) # printf "$destination, $destinationfolder" >&2
+	if [ ! -d "$destinationfolder" ]; then mkdir -p $destinationfolder; fi	
+	# 3.5 Copy
+	cp $option $origin $destination
+	echo "$origin copied succesfully."
+done
+
+echo "done"

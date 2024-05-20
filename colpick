@@ -1,0 +1,15 @@
+#! /usr/bin/env bash
+# 
+# Date:	2024/05/06
+# Author:  andyp3r3z
+#
+# Colorpicker utility under Wayland, with `grim`, `slurp`, `awk`, `sed`, `wl-clipboard` and `libnotify`.
+# 
+# while getopts "r" opt; do
+# 	case $opt in
+# 		r) col="2"
+# 	esac
+# done
+
+grim -g "$(slurp -p)" -t ppm - | convert - -format '%[pixel:p{0,0}]' txt:- | sed -n 2,2p | awk '{print $3}' | wl-copy
+notify-send "Color copied to clipboard."
