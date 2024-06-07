@@ -5,5 +5,5 @@
 #
 # Little bash script to take screenshots with grim and slurp.
 
-grim -g "$(slurp)" - | wl-copy
-notify-send "Screenshot copied to the clipboard" -t 5000 --app-name="Print Screen"
+grim -g "$(slurp)" - | swappy -f -
+# notify-send "Screenshot copied to the clipboard" -t 5000 --app-name="Print Screen"
