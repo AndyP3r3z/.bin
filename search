@@ -23,7 +23,7 @@ def get_link():
 	if selected_options <= {"-c", "--chat"}: # ChatGPT
 		match query:
 			case "otros": hash = "c/f8abb1b9-fa7a-4383-8ed9-832a33d70ea1"
-			case "colegio": hash = "c/34ae3a55-74fd-49ea-89fb-2c6de61cc002"
+			case "colegio": hash = "c/7c055f14-d646-4e2c-9ad0-f88aa2aa2cd6"
 			case "universidad": hash = "c/e43a05b3-871f-4511-9cbd-1ac7aebc25ad"
 			case _:
 				print("No se seleccionó ningún chat existente (otros, colegio, universidad).")
