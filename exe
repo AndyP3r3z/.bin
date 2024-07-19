@@ -8,6 +8,12 @@ if [ $lang = 'python' ]; then
 	interpreter="python3"
 	compiler=""
 	init_code="\ndef main():\n\treturn\n\nif __name__ == '__main__':\n\tmain()"
+elif [ $lang = 'julia' ]; then
+	extension=".jl"
+	comment="#"
+	interpreter="julia"
+	compiler=""
+	init_code=""
 elif [ $lang = 'bash' ]; then
 	extension=".sh"
 	comment="#"
@@ -62,7 +68,7 @@ if [ ! -z "$interpreter" ]; then
 fi
 
 # File data
-echo "$comment Date:	$( date +'%Y/%m/%d' )" >> $filename
+echo "$comment Date:    $( date +'%Y/%m/%d' )" >> $filename
 echo "$comment Author:  $( whoami )" >> $filename
 
 # Compiler
