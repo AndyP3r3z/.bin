@@ -5,5 +5,19 @@
 #
 # Little bash script to take screenshots with grim and slurp.
 
+while getopts 'wd' OPTION; do
+	case "$OPTION" in
+		w)
+			rawgeo=$(hyprctl clients -j | jq -r '[.[] | select(.focusHistoryID==0) | .at, .size | join(",")] | join(" ")')
+			geometry="${rawgeo%,*}x${rawgeo##*,}"
+			grim -g "$geometry" - | swappy -f -
+			exit 0
+			;;
+		d)
+			grim - | swappy -f -
+			exit 0
+			;;
+	esac
+done
+
 grim -g "$(slurp)" - | swappy -f -
-# notify-send "Screenshot copied to the clipboard" -t 5000 --app-name="Print Screen"
