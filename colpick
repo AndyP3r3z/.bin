@@ -1,11 +1,11 @@
 #! /usr/bin/env bash
-# 
+#
 # Date:	2024/05/06
 # Author:  andyp3r3z
 #
-# Colorpicker utility under Wayland, with `grim`, `slurp`, `awk`, `sed`, `wl-clipboard` and `libnotify`.
+# Colorpicker utility under Wayland, with `hyprpicker`, `wl-clipboard` and `libnotify`.
 
-color=$(grim -g "$(slurp -p)" -t ppm - | convert - -format '%[pixel:p{0,0}]' txt:- | sed -n 2,2p | awk '{print $3}')
-wl-copy $color
-notify-send -i pick-colour-picker "Color Picker" "$color copied to clipboard."
-# Possible Icons: pick-colour-picker, 3depict, pinta
+color=$(hyprpicker -a)
+if [[ $color ]]; then
+	notify-send -i pick-colour-picker "Color Picker" "$color copied to clipboard."
+fi
