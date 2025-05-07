@@ -64,7 +64,7 @@ touch $filename
 # Shbang
 if [ ! -z "$interpreter" ]; then
 	chmod +x $filename
-	echo "$comment! /usr/bin/env $interpreter\n$comment " > $filename
+	echo "$comment!/usr/bin/env $interpreter\n$comment" > $filename
 fi
 
 # File data
