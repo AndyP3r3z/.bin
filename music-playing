@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#
+# Date:    2025/06/04
+# Author:  andyp3r3z
+#
+# Little script to show playing music in Hyprlock.
+
+playerctl status &>/dev/null; [ $? -eq 0 ] && playerctl metadata -f '  {{title}} — {{artist}}
+({{status}})'
